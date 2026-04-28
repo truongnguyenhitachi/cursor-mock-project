@@ -10,10 +10,17 @@ import { coursesApi } from '../api/courses'
 import { materialsApi } from '../api/materials'
 import { commentsApi } from '../api/comments'
 import { likesApi } from '../api/likes'
+import { videosApi } from '../api/videos'
 import { apiUrl, extractApiError } from '../api/client'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { Modal } from '../components/Modal'
 import { useToast } from '../components/Toast'
-import type { Comment, Course, CourseMaterial } from '../types'
+import type {
+  Comment,
+  Course,
+  CourseMaterial,
+  CourseVideo,
+} from '../types'
 
 const AUTHOR_KEY = 'student-attendance-ui:author-name'
 
@@ -58,9 +65,26 @@ export function CourseDetailPage() {
   )
 
   const [materials, setMaterials] = useState<CourseMaterial[]>([])
+  const [videos, setVideos] = useState<CourseVideo[]>([])
   const [comments, setComments] = useState<Comment[]>([])
   const [commentsLoading, setCommentsLoading] = useState(false)
   const [coverBust, setCoverBust] = useState(0)
+
+  const [videoUploading, setVideoUploading] = useState(false)
+  const [videoUploadName, setVideoUploadName] = useState('')
+  const [videoUploadPercent, setVideoUploadPercent] = useState(0)
+  const [videoTitle, setVideoTitle] = useState('')
+  const [videoDescription, setVideoDescription] = useState('')
+
+  const [editingVideo, setEditingVideo] = useState<CourseVideo | null>(null)
+  const [editVideoTitle, setEditVideoTitle] = useState('')
+  const [editVideoDescription, setEditVideoDescription] = useState('')
+  const [editVideoSubmitting, setEditVideoSubmitting] = useState(false)
+
+  const [deleteVideoId, setDeleteVideoId] = useState<number | null>(null)
+  const [deletingVideo, setDeletingVideo] = useState(false)
+
+  const [playingVideo, setPlayingVideo] = useState<CourseVideo | null>(null)
 
   const [authorName, setAuthorName] = useState(
     () => localStorage.getItem(AUTHOR_KEY) ?? '',
@@ -80,6 +104,7 @@ export function CourseDetailPage() {
 
   const coverFileRef = useRef<HTMLInputElement>(null)
   const materialFileRef = useRef<HTMLInputElement>(null)
+  const videoFileRef = useRef<HTMLInputElement>(null)
 
   const reloadCourse = useCallback(async () => {
     const data = await coursesApi.get(courseId)
@@ -89,6 +114,11 @@ export function CourseDetailPage() {
   const reloadMaterials = useCallback(async () => {
     const data = await materialsApi.list(courseId)
     setMaterials(data)
+  }, [courseId])
+
+  const reloadVideos = useCallback(async () => {
+    const data = await videosApi.list(courseId)
+    setVideos(data)
   }, [courseId])
 
   const reloadComments = useCallback(async () => {
@@ -108,14 +138,17 @@ export function CourseDetailPage() {
       setLoading(true)
       setError(null)
       try {
-        const [courseData, materialList, commentPage] = await Promise.all([
-          coursesApi.get(courseId),
-          materialsApi.list(courseId),
-          commentsApi.list(courseId, { page: 0, size: 50 }),
-        ])
+        const [courseData, materialList, videoList, commentPage] =
+          await Promise.all([
+            coursesApi.get(courseId),
+            materialsApi.list(courseId),
+            videosApi.list(courseId),
+            commentsApi.list(courseId, { page: 0, size: 50 }),
+          ])
         if (cancelled) return
         setCourse(courseData)
         setMaterials(materialList)
+        setVideos(videoList)
         setComments(commentPage.content)
       } catch (e) {
         if (!cancelled) setError(extractApiError(e).message)
@@ -229,6 +262,79 @@ export function CourseDetailPage() {
     setDropActive(false)
     const files = Array.from(e.dataTransfer.files ?? [])
     if (files.length > 0) void uploadMaterials(files)
+  }
+
+  async function uploadVideo(file: File) {
+    if (!file.type.startsWith('video/')) {
+      toast.error('Please pick a video file')
+      return
+    }
+    setVideoUploading(true)
+    setVideoUploadName(file.name)
+    setVideoUploadPercent(0)
+    try {
+      await videosApi.upload(courseId, file, {
+        title: videoTitle.trim() || undefined,
+        description: videoDescription.trim() || undefined,
+        onProgress: setVideoUploadPercent,
+      })
+      await Promise.all([reloadVideos(), reloadCourse()])
+      toast.success('Video uploaded')
+      setVideoTitle('')
+      setVideoDescription('')
+    } catch (e) {
+      toast.error(extractApiError(e).message)
+    } finally {
+      setVideoUploading(false)
+      setVideoUploadPercent(0)
+      setVideoUploadName('')
+    }
+  }
+
+  function onVideoFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) void uploadVideo(file)
+    e.target.value = ''
+  }
+
+  function openEditVideo(v: CourseVideo) {
+    setEditingVideo(v)
+    setEditVideoTitle(v.title)
+    setEditVideoDescription(v.description ?? '')
+  }
+
+  async function submitEditVideo(e: FormEvent) {
+    e.preventDefault()
+    if (!editingVideo) return
+    setEditVideoSubmitting(true)
+    try {
+      await videosApi.updateMetadata(courseId, editingVideo.id, {
+        title: editVideoTitle.trim(),
+        description: editVideoDescription.trim() || undefined,
+      })
+      await reloadVideos()
+      toast.success('Video updated')
+      setEditingVideo(null)
+    } catch (err) {
+      toast.error(extractApiError(err).message)
+    } finally {
+      setEditVideoSubmitting(false)
+    }
+  }
+
+  async function confirmDeleteVideo() {
+    if (deleteVideoId == null) return
+    setDeletingVideo(true)
+    try {
+      await videosApi.delete(courseId, deleteVideoId)
+      await Promise.all([reloadVideos(), reloadCourse()])
+      toast.success('Video removed')
+      setDeleteVideoId(null)
+    } catch (e) {
+      toast.error(extractApiError(e).message)
+    } finally {
+      setDeletingVideo(false)
+    }
   }
 
   async function confirmDeleteMaterial() {
@@ -401,6 +507,140 @@ export function CourseDetailPage() {
           <div className="card">
             <div className="section-header">
               <div>
+                <h2>Videos</h2>
+                <p>
+                  Upload lecture recordings, demos, or short clips. Click any
+                  thumbnail to play.
+                </p>
+              </div>
+              <input
+                type="file"
+                accept="video/*"
+                ref={videoFileRef}
+                onChange={onVideoFileChange}
+                style={{ display: 'none' }}
+              />
+              <button
+                type="button"
+                className="btn btn--primary btn--sm"
+                onClick={() => videoFileRef.current?.click()}
+                disabled={videoUploading}
+              >
+                {videoUploading ? 'Uploading…' : '+ Upload video'}
+              </button>
+            </div>
+
+            <div className="form-grid">
+              <div className="form-field">
+                <label htmlFor="video-title">Title (optional)</label>
+                <input
+                  id="video-title"
+                  value={videoTitle}
+                  onChange={(e) => setVideoTitle(e.target.value)}
+                  placeholder="Defaults to the file name"
+                  maxLength={200}
+                  disabled={videoUploading}
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="video-description">Description (optional)</label>
+                <input
+                  id="video-description"
+                  value={videoDescription}
+                  onChange={(e) => setVideoDescription(e.target.value)}
+                  placeholder="Short summary"
+                  maxLength={1000}
+                  disabled={videoUploading}
+                />
+              </div>
+            </div>
+
+            {videoUploading ? (
+              <div className="upload-progress">
+                <div className="upload-progress__head">
+                  <span>Uploading {videoUploadName || 'video'}…</span>
+                  <strong>{videoUploadPercent}%</strong>
+                </div>
+                <div className="upload-progress__bar">
+                  <span style={{ width: `${videoUploadPercent}%` }} />
+                </div>
+              </div>
+            ) : null}
+
+            {videos.length === 0 ? (
+              <div className="empty-state" style={{ padding: '1.25rem' }}>
+                <p>No videos yet — upload one above.</p>
+              </div>
+            ) : (
+              <div className="video-grid">
+                {videos.map((v) => (
+                  <div className="video-card" key={v.id}>
+                    <button
+                      type="button"
+                      className="video-card__thumb"
+                      onClick={() => setPlayingVideo(v)}
+                      aria-label={`Play ${v.title}`}
+                    >
+                      <span className="video-card__play">
+                        <span className="video-card__play-circle">
+                          <svg viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </span>
+                      </span>
+                      <span className="video-card__duration">
+                        {formatBytes(v.sizeBytes)}
+                      </span>
+                    </button>
+                    <div className="video-card__body">
+                      <h3 className="video-card__title" title={v.title}>
+                        {v.title}
+                      </h3>
+                      {v.description ? (
+                        <div
+                          className="video-card__desc"
+                          title={v.description}
+                        >
+                          {v.description}
+                        </div>
+                      ) : null}
+                      <div className="video-card__meta">
+                        Uploaded {formatRelative(v.uploadedAt)}
+                      </div>
+                    </div>
+                    <div className="video-card__actions">
+                      <button
+                        type="button"
+                        className="btn btn--secondary btn--sm"
+                        onClick={() => openEditVideo(v)}
+                      >
+                        Edit
+                      </button>
+                      <a
+                        className="btn btn--ghost btn--sm"
+                        href={apiUrl(v.downloadUrl)}
+                        download={v.originalFilename}
+                      >
+                        Download
+                      </a>
+                      <button
+                        type="button"
+                        className="btn btn--danger btn--sm"
+                        onClick={() => setDeleteVideoId(v.id)}
+                        style={{ marginLeft: 'auto' }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="section-header">
+              <div>
                 <h2>Materials</h2>
                 <p>
                   Upload PDFs, slides, or any file students need for this
@@ -556,6 +796,92 @@ export function CourseDetailPage() {
           </div>
         </div>
       </div>
+
+      <Modal
+        open={playingVideo !== null}
+        title={playingVideo?.title ?? ''}
+        onClose={() => setPlayingVideo(null)}
+        extraClassName="modal--video"
+      >
+        {playingVideo ? (
+          <video
+            key={playingVideo.id}
+            src={apiUrl(playingVideo.streamUrl)}
+            controls
+            autoPlay
+            preload="metadata"
+            style={{ width: '100%' }}
+          >
+            Your browser cannot play this video.
+          </video>
+        ) : null}
+      </Modal>
+
+      <Modal
+        open={editingVideo !== null}
+        title="Edit video"
+        onClose={() =>
+          editVideoSubmitting ? undefined : setEditingVideo(null)
+        }
+        narrow
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={() => setEditingVideo(null)}
+              disabled={editVideoSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="edit-video-form"
+              className="btn btn--primary"
+              disabled={editVideoSubmitting}
+            >
+              {editVideoSubmitting ? 'Saving…' : 'Save'}
+            </button>
+          </>
+        }
+      >
+        <form
+          id="edit-video-form"
+          className="form-grid form-grid--single"
+          onSubmit={submitEditVideo}
+        >
+          <div className="form-field">
+            <label htmlFor="edit-video-title">Title</label>
+            <input
+              id="edit-video-title"
+              required
+              maxLength={200}
+              value={editVideoTitle}
+              onChange={(e) => setEditVideoTitle(e.target.value)}
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="edit-video-description">Description</label>
+            <textarea
+              id="edit-video-description"
+              maxLength={1000}
+              value={editVideoDescription}
+              onChange={(e) => setEditVideoDescription(e.target.value)}
+            />
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={deleteVideoId !== null}
+        title="Delete video?"
+        message="The video file will be removed from disk and cannot be recovered."
+        confirmLabel="Delete"
+        destructive
+        busy={deletingVideo}
+        onCancel={() => (deletingVideo ? undefined : setDeleteVideoId(null))}
+        onConfirm={confirmDeleteVideo}
+      />
 
       <ConfirmDialog
         open={deleteMaterialId !== null}

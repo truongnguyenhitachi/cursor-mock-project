@@ -8,7 +8,7 @@ public final class CourseMapper {
     private CourseMapper() {}
 
     public static CourseResponse toResponse(Course course) {
-        return toResponse(course, new CourseStats(0, 0, 0, false));
+        return toResponse(course, new CourseStats(0, 0, 0, 0, false));
     }
 
     public static CourseResponse toResponse(Course course, CourseStats stats) {
@@ -25,6 +25,7 @@ public final class CourseMapper {
                 stats.likeCount(),
                 stats.commentCount(),
                 stats.materialCount(),
+                stats.videoCount(),
                 stats.likedByMe(),
                 course.getCreatedAt(),
                 course.getUpdatedAt()
@@ -35,6 +36,7 @@ public final class CourseMapper {
             long likeCount,
             long commentCount,
             long materialCount,
+            long videoCount,
             boolean likedByMe
     ) {}
 }

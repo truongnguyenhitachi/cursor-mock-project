@@ -243,6 +243,74 @@ curl -X POST http://localhost:8080/api/v1/courses/1/materials \
 
 ---
 
+## Videos
+
+Each course can have any number of **video lessons**. Videos have title +
+description metadata, are uploaded as multipart, and are streamed back with
+HTTP byte-range support so the browser's `<video>` player can seek without
+downloading the whole file.
+
+| Method | Path                                              | Description                                | Success |
+|--------|---------------------------------------------------|--------------------------------------------|---------|
+| GET    | `/courses/{courseId}/videos`                      | List videos for a course                   | 200     |
+| POST   | `/courses/{courseId}/videos`                      | Upload a video (multipart: `file`, `title`, `description`) | 201     |
+| PUT    | `/courses/{courseId}/videos/{videoId}`            | Update title / description (JSON)          | 200     |
+| DELETE | `/courses/{courseId}/videos/{videoId}`            | Delete a video                             | 204     |
+| GET    | `/courses/{courseId}/videos/{videoId}/stream`     | **Range-aware** stream for the player      | 200/206 |
+| GET    | `/courses/{courseId}/videos/{videoId}/download`   | Force-download the original file           | 200     |
+
+The upload endpoint validates that `file.contentType` starts with `video/`. The
+default multipart limits in `application.yml` are 200 MB per file / 220 MB per
+request — adjust `spring.servlet.multipart.max-file-size` to fit your needs.
+
+```bash
+# Upload a lecture recording with a title and description
+curl -X POST http://localhost:8080/api/v1/courses/1/videos \
+  -F "file=@lecture-1.mp4" \
+  -F "title=Week 1: Limits" \
+  -F "description=Intro to the limit concept and a few worked examples"
+```
+
+### Update video metadata — request
+
+```json
+{ "title": "Week 1: Limits (re-cut)", "description": "Cleaner audio" }
+```
+
+### Video response
+
+```json
+{
+  "id": 4,
+  "courseId": 1,
+  "title": "Week 1: Limits",
+  "description": "Intro to the limit concept...",
+  "originalFilename": "lecture-1.mp4",
+  "contentType": "video/mp4",
+  "sizeBytes": 18472311,
+  "streamUrl":   "/courses/1/videos/4/stream",
+  "downloadUrl": "/courses/1/videos/4/download",
+  "uploadedAt": "2026-04-28T14:30:01.122",
+  "updatedAt":  "2026-04-28T14:30:01.122"
+}
+```
+
+### Streaming &amp; byte ranges
+
+The `/stream` endpoint advertises `Accept-Ranges: bytes` and honours the
+`Range` request header:
+
+- **No `Range`** → `200 OK` with the first 1 MB chunk; the browser will then
+  request more chunks as the user plays.
+- **With `Range`** → `206 Partial Content` with the requested slice (capped at
+  1 MB per response). This lets HTML5 `<video>` seek instantly and keeps
+  memory use low.
+
+You can drop the URL straight into a `<video src=...>` element on the
+frontend; no JavaScript glue needed.
+
+---
+
 ## Comments
 
 Base path: `/courses/{courseId}/comments` and `/comments/{commentId}`
@@ -425,9 +493,10 @@ uploads/
 └── courses/
     └── {courseId}/
         ├── cover/{uuid}.png        # one cover image (replaces previous on re-upload)
-        └── materials/{uuid}.pdf    # one file per material; original filename preserved
-                                    #   in the DB and used as the download filename
+        ├── materials/{uuid}.pdf    # one file per material; original filename preserved
+        │                           #   in the DB and used as the download filename
+        └── videos/{uuid}.mp4       # one file per video; title & description live in DB
 ```
 
-Deleting a course removes its row, all comments / comment likes / course likes / materials,
-**and** every uploaded file from disk.
+Deleting a course removes its row, all comments / comment likes / course likes / materials
+/ videos, **and** every uploaded file (covers, material files, video files) from disk.

@@ -9,6 +9,7 @@ C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\ex
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\domain\Course.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\domain\CourseLike.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\domain\CourseMaterial.java
+C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\domain\CourseVideo.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\domain\Student.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\dto\AttendanceRequest.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\dto\AttendanceResponse.java
@@ -18,6 +19,8 @@ C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\ex
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\dto\CourseMaterialResponse.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\dto\CourseRequest.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\dto\CourseResponse.java
+C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\dto\CourseVideoRequest.java
+C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\dto\CourseVideoResponse.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\dto\LikeStatusResponse.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\dto\StudentRequest.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\dto\StudentResponse.java
@@ -34,6 +37,7 @@ C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\ex
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\repository\CourseLikeRepository.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\repository\CourseMaterialRepository.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\repository\CourseRepository.java
+C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\repository\CourseVideoRepository.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\repository\StudentRepository.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\service\AttendanceService.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\service\CommentService.java
@@ -42,6 +46,7 @@ C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\ex
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\service\MaterialService.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\service\StorageService.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\service\StudentService.java
+C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\service\VideoService.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\StudentAttendanceApiApplication.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\web\AttendanceController.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\web\CommentController.java
@@ -49,3 +54,4 @@ C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\ex
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\web\LikeController.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\web\MaterialController.java
 C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\web\StudentController.java
+C:\Users\TruongTruong\Cursor Project\student-attendance-api\src\main\java\com\example\attendance\web\VideoController.java

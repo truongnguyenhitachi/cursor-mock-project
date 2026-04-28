@@ -45,6 +45,7 @@ export interface Course {
   likeCount: number
   commentCount: number
   materialCount: number
+  videoCount: number
   likedByMe: boolean
   createdAt: string
   updatedAt: string
@@ -87,6 +88,25 @@ export interface CommentRequest {
 export interface LikeStatus {
   likeCount: number
   likedByMe: boolean
+}
+
+export interface CourseVideo {
+  id: number
+  courseId: number
+  title: string
+  description: string | null
+  originalFilename: string
+  contentType: string | null
+  sizeBytes: number
+  streamUrl: string
+  downloadUrl: string
+  uploadedAt: string
+  updatedAt: string
+}
+
+export interface CourseVideoMetadata {
+  title: string
+  description?: string
 }
 
 export interface Attendance {

@@ -11,6 +11,7 @@ import com.example.attendance.repository.CommentRepository;
 import com.example.attendance.repository.CourseLikeRepository;
 import com.example.attendance.repository.CourseMaterialRepository;
 import com.example.attendance.repository.CourseRepository;
+import com.example.attendance.repository.CourseVideoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,7 @@ public class CourseService {
 
     private final CourseRepository courseRepository;
     private final CourseMaterialRepository materialRepository;
+    private final CourseVideoRepository videoRepository;
     private final CommentRepository commentRepository;
     private final CourseLikeRepository courseLikeRepository;
     private final CommentLikeRepository commentLikeRepository;
@@ -76,6 +78,11 @@ public class CourseService {
                 .forEach(m -> storageService.delete(m.getStoredPath()));
         materialRepository.deleteByCourseId(id);
 
+        // Same for videos.
+        videoRepository.findByCourseIdOrderByUploadedAtDesc(id)
+                .forEach(v -> storageService.delete(v.getStoredPath()));
+        videoRepository.deleteByCourseId(id);
+
         if (course.getCoverImagePath() != null) {
             storageService.delete(course.getCoverImagePath());
         }
@@ -100,11 +107,12 @@ public class CourseService {
         long likes = courseLikeRepository.countByCourseId(course.getId());
         long comments = commentRepository.countByCourseId(course.getId());
         long materials = materialRepository.countByCourseId(course.getId());
+        long videos = videoRepository.countByCourseId(course.getId());
         boolean likedByMe = clientId != null && !clientId.isBlank()
                 && courseLikeRepository.existsByCourseIdAndClientId(course.getId(), clientId);
         return CourseMapper.toResponse(
                 course,
-                new CourseMapper.CourseStats(likes, comments, materials, likedByMe)
+                new CourseMapper.CourseStats(likes, comments, materials, videos, likedByMe)
         );
     }
 }

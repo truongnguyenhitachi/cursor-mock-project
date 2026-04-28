@@ -8,6 +8,7 @@ interface ModalProps {
   children: ReactNode
   footer?: ReactNode
   narrow?: boolean
+  extraClassName?: string
 }
 
 export function Modal({
@@ -17,6 +18,7 @@ export function Modal({
   children,
   footer,
   narrow,
+  extraClassName,
 }: ModalProps) {
   useEffect(() => {
     if (!open) return
@@ -38,7 +40,13 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className={narrow ? 'modal modal--narrow' : 'modal'}
+        className={[
+          'modal',
+          narrow ? 'modal--narrow' : '',
+          extraClassName ?? '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal__header">

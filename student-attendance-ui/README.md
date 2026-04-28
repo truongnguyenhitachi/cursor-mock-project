@@ -23,10 +23,13 @@ attendance, plus per‑student attendance summaries.
   material counts, create / edit / delete from the card, and links into
   a per‑course detail page.
 - **Course detail** — upload a cover image, drag‑and‑drop one or more
-  **material files** (PDFs, slides, images), download or delete them,
-  **like / unlike the course**, post **comments** (with author name),
-  and **like comments**. Comments you posted from this browser show a
-  Delete action.
+  **material files** (PDFs, slides, images), upload **video lessons**
+  (with title + description and a live upload progress bar), play any
+  video inline in a modal player that uses the API's HTTP byte‑range
+  streaming endpoint for instant seeking, edit / delete video metadata,
+  download or delete materials, **like / unlike the course**, post
+  **comments** (with author name), and **like comments**. Comments you
+  posted from this browser show a Delete action.
 - **Attendance** — pick a course + date to view recorded attendance,
   one‑click "quick mark" for any enrolled student, full create / edit /
   delete dialogs, and a per‑student attendance summary (optionally
@@ -110,6 +113,7 @@ src/
 │   ├── courses.ts
 │   ├── attendance.ts
 │   ├── materials.ts   # course cover + material file uploads / downloads
+│   ├── videos.ts      # course video upload (with progress) / list / edit / delete
 │   ├── comments.ts    # course comments (CRUD)
 │   └── likes.ts       # like / unlike for courses and comments
 ├── components/        # Reusable UI primitives
@@ -159,6 +163,15 @@ All URLs are relative to `/api/v1`.
 - `POST /courses/{id}/materials` (multipart, field `files`) — upload one or more
 - `GET /courses/{id}/materials/{matId}/download` — stream original bytes
 - `DELETE /courses/{id}/materials/{matId}`
+
+### Course videos
+- `GET /courses/{id}/videos` — list
+- `POST /courses/{id}/videos` (multipart: `file`, optional `title`, `description`)
+- `PUT /courses/{id}/videos/{videoId}` — update title / description
+- `DELETE /courses/{id}/videos/{videoId}`
+- `GET /courses/{id}/videos/{videoId}/stream` — used directly as `<video src>`
+  (HTTP byte-range support → instant seeking)
+- `GET /courses/{id}/videos/{videoId}/download` — force download
 
 ### Comments
 - `GET /courses/{id}/comments?page=&size=`

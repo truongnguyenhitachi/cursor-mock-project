@@ -26,8 +26,10 @@ spring:
   servlet:
     multipart:
       enabled: true
-      max-file-size: 25MB
-      max-request-size: 50MB
+      # Course materials max ~25 MB; videos can be large, so the cap is 200 MB
+      # per file and 220 MB per request. Tune both to match your storage.
+      max-file-size: 200MB
+      max-request-size: 220MB
 
 server:
   port: 8081

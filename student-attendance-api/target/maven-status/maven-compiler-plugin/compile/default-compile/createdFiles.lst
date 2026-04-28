@@ -3,6 +3,7 @@ com\example\attendance\mapper\AttendanceMapper.class
 com\example\attendance\web\StudentController.class
 com\example\attendance\config\StorageConfig.class
 com\example\attendance\mapper\StudentMapper.class
+com\example\attendance\repository\CourseVideoRepository.class
 com\example\attendance\web\AttendanceController.class
 com\example\attendance\domain\Course$CourseBuilder.class
 com\example\attendance\dto\CourseMaterialResponse.class
@@ -30,6 +31,7 @@ com\example\attendance\mapper\CourseMapper$CourseStats.class
 com\example\attendance\dto\LikeStatusResponse.class
 com\example\attendance\web\MaterialController.class
 com\example\attendance\domain\Attendance$AttendanceBuilder.class
+com\example\attendance\web\VideoController.class
 com\example\attendance\repository\CourseLikeRepository.class
 com\example\attendance\domain\CourseLike.class
 com\example\attendance\dto\CourseRequest.class
@@ -38,9 +40,12 @@ com\example\attendance\service\AttendanceService.class
 com\example\attendance\mapper\CourseMapper.class
 com\example\attendance\domain\CommentLike.class
 com\example\attendance\domain\CourseLike$CourseLikeBuilder.class
+com\example\attendance\service\VideoService.class
 com\example\attendance\domain\CommentLike$CommentLikeBuilder.class
 com\example\attendance\config\WebConfig.class
+com\example\attendance\dto\CourseVideoResponse.class
 com\example\attendance\repository\StudentRepository.class
+com\example\attendance\domain\CourseVideo.class
 com\example\attendance\dto\StudentResponse$CourseSummary.class
 com\example\attendance\service\CommentService.class
 com\example\attendance\repository\AttendanceRepository.class
@@ -52,14 +57,18 @@ com\example\attendance\config\StorageProperties.class
 com\example\attendance\repository\AttendanceRepository$StatusCount.class
 com\example\attendance\service\LikeService.class
 com\example\attendance\exception\GlobalExceptionHandler.class
+com\example\attendance\domain\CourseVideo$CourseVideoBuilder.class
 com\example\attendance\exception\ApiError.class
 com\example\attendance\domain\CourseMaterial.class
 com\example\attendance\dto\CommentResponse.class
 com\example\attendance\domain\Student.class
 com\example\attendance\exception\ConflictException.class
 com\example\attendance\dto\AttendanceSummaryResponse.class
+com\example\attendance\service\VideoService$DownloadPayload.class
+com\example\attendance\service\VideoService$StreamPayload.class
 com\example\attendance\web\CommentController.class
 com\example\attendance\domain\Comment$CommentBuilder.class
 com\example\attendance\config\DevDataSeeder.class
 com\example\attendance\web\LikeController.class
+com\example\attendance\dto\CourseVideoRequest.class
 com\example\attendance\web\CourseController.class

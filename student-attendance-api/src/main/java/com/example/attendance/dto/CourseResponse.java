@@ -13,6 +13,7 @@ public record CourseResponse(
         long likeCount,
         long commentCount,
         long materialCount,
+        long videoCount,
         boolean likedByMe,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
