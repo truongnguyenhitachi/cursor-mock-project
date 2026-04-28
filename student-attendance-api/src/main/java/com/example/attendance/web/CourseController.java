@@ -17,6 +17,8 @@ import java.net.URI;
 @RequiredArgsConstructor
 public class CourseController {
 
+    public static final String CLIENT_ID_HEADER = "X-Client-Id";
+
     private final CourseService courseService;
 
     @PostMapping
@@ -26,13 +28,19 @@ public class CourseController {
     }
 
     @GetMapping("/{id}")
-    public CourseResponse get(@PathVariable Long id) {
-        return courseService.get(id);
+    public CourseResponse get(
+            @PathVariable Long id,
+            @RequestHeader(value = CLIENT_ID_HEADER, required = false) String clientId
+    ) {
+        return courseService.get(id, clientId);
     }
 
     @GetMapping
-    public Page<CourseResponse> list(Pageable pageable) {
-        return courseService.list(pageable);
+    public Page<CourseResponse> list(
+            Pageable pageable,
+            @RequestHeader(value = CLIENT_ID_HEADER, required = false) String clientId
+    ) {
+        return courseService.list(pageable, clientId);
     }
 
     @PutMapping("/{id}")

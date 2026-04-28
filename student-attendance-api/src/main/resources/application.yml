@@ -23,10 +23,21 @@ spring:
       enabled: true
       path: /h2-console
 
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 25MB
+      max-request-size: 50MB
+
 server:
   port: 8081
   servlet:
     context-path: /api/v1
+
+app:
+  # Where uploaded files (course covers and materials) are stored on disk.
+  # Resolved relative to the API process working directory.
+  upload-dir: ./uploads
 
 logging:
   level:

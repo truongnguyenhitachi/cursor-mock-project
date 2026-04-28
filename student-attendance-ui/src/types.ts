@@ -40,6 +40,12 @@ export interface Course {
   name: string
   description: string | null
   credits: number
+  hasCoverImage: boolean
+  coverImageUrl: string | null
+  likeCount: number
+  commentCount: number
+  materialCount: number
+  likedByMe: boolean
   createdAt: string
   updatedAt: string
 }
@@ -49,6 +55,38 @@ export interface CourseRequest {
   name: string
   description?: string
   credits: number
+}
+
+export interface CourseMaterial {
+  id: number
+  courseId: number
+  originalFilename: string
+  contentType: string | null
+  sizeBytes: number
+  downloadUrl: string
+  uploadedAt: string
+}
+
+export interface Comment {
+  id: number
+  courseId: number
+  authorName: string
+  content: string
+  likeCount: number
+  likedByMe: boolean
+  ownedByMe: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CommentRequest {
+  authorName: string
+  content: string
+}
+
+export interface LikeStatus {
+  likeCount: number
+  likedByMe: boolean
 }
 
 export interface Attendance {

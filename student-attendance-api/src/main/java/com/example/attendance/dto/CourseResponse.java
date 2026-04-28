@@ -8,6 +8,12 @@ public record CourseResponse(
         String name,
         String description,
         Integer credits,
+        boolean hasCoverImage,
+        String coverImageUrl,
+        long likeCount,
+        long commentCount,
+        long materialCount,
+        boolean likedByMe,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

@@ -41,6 +41,10 @@ public class Course {
     @Column(name = "credits", nullable = false)
     private Integer credits;
 
+    /** Relative path under the upload root pointing at the cover image, or null. */
+    @Column(name = "cover_image_path", length = 255)
+    private String coverImagePath;
+
     @ManyToMany(mappedBy = "courses", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<Student> students = new HashSet<>();

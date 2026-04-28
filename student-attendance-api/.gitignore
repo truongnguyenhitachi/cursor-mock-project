@@ -1,0 +1,16 @@
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Logs
+*.log
+
+# Local uploads (cover images and course materials)
+uploads/

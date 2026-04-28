@@ -166,9 +166,142 @@ Validation:
   "name": "Calculus I",
   "description": "Limits, derivatives, integrals",
   "credits": 4,
+  "hasCoverImage": false,
+  "coverImageUrl": null,
+  "likeCount": 12,
+  "commentCount": 3,
+  "materialCount": 4,
+  "likedByMe": false,
   "createdAt": "2026-04-28T09:34:36.183288",
   "updatedAt": "2026-04-28T09:34:36.183288"
 }
+```
+
+`likedByMe` is computed from the `X-Client-Id` request header (see "Anonymous identity" below); it is always `false` when the header is absent. `coverImageUrl` is a relative path (e.g. `/courses/1/cover`) you can suffix to the API base to get the bytes.
+
+---
+
+## Anonymous identity (X-Client-Id)
+
+The like / comment features have no login. Instead, **the client must send an `X-Client-Id` header** containing a stable per-browser UUID. The React UI generates one and stores it in `localStorage`. The server uses this value to:
+
+- enforce **one like per (course or comment, client)** — likes are idempotent;
+- compute **`likedByMe`** flags on course/comment responses;
+- enforce **owner-only edit/delete on comments** — the comment is bound to the `clientId` that created it.
+
+Send it on every request:
+
+```
+X-Client-Id: 8f9b3b2c-1a2d-4e6f-9c11-7d2b3e4f5a6b
+```
+
+---
+
+## Course covers &amp; materials (file uploads)
+
+Each course can have one **cover image** and any number of **material files** (PDFs, slides, etc.).
+
+| Method | Path                                              | Description                          | Success |
+|--------|---------------------------------------------------|--------------------------------------|---------|
+| GET    | `/courses/{courseId}/cover`                       | Stream the cover image bytes         | 200     |
+| POST   | `/courses/{courseId}/cover`                       | Upload a cover image (multipart)     | 200     |
+| DELETE | `/courses/{courseId}/cover`                       | Remove the cover image               | 204     |
+| GET    | `/courses/{courseId}/materials`                   | List materials                       | 200     |
+| POST   | `/courses/{courseId}/materials`                   | Upload one or more files (multipart) | 200     |
+| GET    | `/courses/{courseId}/materials/{matId}/download`  | Download a material                  | 200     |
+| DELETE | `/courses/{courseId}/materials/{matId}`           | Delete a material                    | 204     |
+
+Both upload endpoints use `multipart/form-data`:
+- cover: form field `file` (single image; `image/*` only)
+- materials: form field `files` (one or more files of any type)
+
+Limits are configured in `application.yml` (`spring.servlet.multipart.max-file-size=25MB`, `max-request-size=50MB`). Files are stored under `app.upload-dir` (default `./uploads`).
+
+```bash
+# Upload a cover
+curl -X POST http://localhost:8080/api/v1/courses/1/cover \
+  -F "file=@cover.png"
+
+# Upload several materials
+curl -X POST http://localhost:8080/api/v1/courses/1/materials \
+  -F "files=@syllabus.pdf" -F "files=@week1.pptx"
+```
+
+### Material response
+
+```json
+{
+  "id": 7,
+  "courseId": 1,
+  "originalFilename": "syllabus.pdf",
+  "contentType": "application/pdf",
+  "sizeBytes": 184213,
+  "downloadUrl": "/courses/1/materials/7/download",
+  "uploadedAt": "2026-04-28T13:01:55.122"
+}
+```
+
+---
+
+## Comments
+
+Base path: `/courses/{courseId}/comments` and `/comments/{commentId}`
+
+| Method | Path                                       | Description                         | Success |
+|--------|--------------------------------------------|-------------------------------------|---------|
+| GET    | `/courses/{courseId}/comments?page=&size=` | List comments for a course (paged)  | 200     |
+| POST   | `/courses/{courseId}/comments`             | Post a comment                      | 201     |
+| PUT    | `/comments/{commentId}`                    | Edit a comment (author-only)        | 200     |
+| DELETE | `/comments/{commentId}`                    | Delete a comment (author-only)      | 204     |
+
+The author check is `clientId == comment.clientId`; mismatches return `403 Forbidden`.
+
+### Create / update comment — request
+
+```json
+{
+  "authorName": "Alice",
+  "content": "Loved the lectures, especially week 3!"
+}
+```
+
+Validation: `authorName` (required, max 80), `content` (required, max 2000).
+
+### Comment response
+
+```json
+{
+  "id": 5,
+  "courseId": 1,
+  "authorName": "Alice",
+  "content": "Loved the lectures, especially week 3!",
+  "likeCount": 2,
+  "likedByMe": false,
+  "ownedByMe": true,
+  "createdAt": "2026-04-28T13:14:01.456",
+  "updatedAt": "2026-04-28T13:14:01.456"
+}
+```
+
+---
+
+## Likes
+
+Likes work the same way for courses and comments — `POST` to like, `DELETE` to unlike, `GET` to check status. All endpoints require `X-Client-Id`.
+
+| Method | Path                              | Success |
+|--------|-----------------------------------|---------|
+| GET    | `/courses/{courseId}/likes`       | 200     |
+| POST   | `/courses/{courseId}/likes`       | 200     |
+| DELETE | `/courses/{courseId}/likes`       | 200     |
+| GET    | `/comments/{commentId}/likes`     | 200     |
+| POST   | `/comments/{commentId}/likes`     | 200     |
+| DELETE | `/comments/{commentId}/likes`     | 200     |
+
+All return:
+
+```json
+{ "likeCount": 13, "likedByMe": true }
 ```
 
 ---
@@ -269,12 +402,32 @@ curl -X POST http://localhost:8080/api/v1/attendance \
 ```
 src/main/java/com/example/attendance
 ├── StudentAttendanceApiApplication.java
-├── config/         # DevDataSeeder (h2 profile only)
-├── domain/         # JPA entities: Student, Course, Attendance, AttendanceStatus
-├── dto/            # Request / response records
+├── config/         # DevDataSeeder (h2 profile only), StorageConfig, WebConfig (CORS)
+├── domain/         # JPA entities: Student, Course, Attendance, AttendanceStatus,
+│                   #   CourseMaterial, Comment, CourseLike, CommentLike
+├── dto/            # Request / response records (incl. CommentRequest, LikeStatusResponse,
+│                   #   CourseMaterialResponse, ...)
 ├── exception/      # NotFoundException, ConflictException, GlobalExceptionHandler
 ├── mapper/         # Entity -> DTO mappers
 ├── repository/     # Spring Data JPA repositories
-├── service/        # Business logic (transactional)
-└── web/            # REST controllers
+├── service/        # Business logic (transactional): CourseService, MaterialService,
+│                   #   CommentService, LikeService, StorageService, ...
+└── web/            # REST controllers (incl. MaterialController, CommentController,
+                    #   LikeController)
 ```
+
+## Storage layout
+
+Uploaded files live under `app.upload-dir` (default `./uploads`):
+
+```
+uploads/
+└── courses/
+    └── {courseId}/
+        ├── cover/{uuid}.png        # one cover image (replaces previous on re-upload)
+        └── materials/{uuid}.pdf    # one file per material; original filename preserved
+                                    #   in the DB and used as the download filename
+```
+
+Deleting a course removes its row, all comments / comment likes / course likes / materials,
+**and** every uploaded file from disk.

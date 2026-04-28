@@ -19,7 +19,14 @@ attendance, plus per‑student attendance summaries.
 - **Students** — paginated list with debounced search, create / edit /
   delete, and an enrollment manager to add or remove a student from
   courses.
-- **Courses** — paginated list with create / edit / delete and validation.
+- **Courses** — card grid with cover thumbnails, like / comment /
+  material counts, create / edit / delete from the card, and links into
+  a per‑course detail page.
+- **Course detail** — upload a cover image, drag‑and‑drop one or more
+  **material files** (PDFs, slides, images), download or delete them,
+  **like / unlike the course**, post **comments** (with author name),
+  and **like comments**. Comments you posted from this browser show a
+  Delete action.
 - **Attendance** — pick a course + date to view recorded attendance,
   one‑click "quick mark" for any enrolled student, full create / edit /
   delete dialogs, and a per‑student attendance summary (optionally
@@ -27,6 +34,21 @@ attendance, plus per‑student attendance summaries.
 - Reusable toast notifications, modal dialog, confirm dialog, and
   pagination components.
 - Responsive layout that collapses the sidebar on narrow screens.
+
+## Anonymous identity
+
+The API has no login. Likes and comments are tied to a per‑browser
+**`X-Client-Id`** UUID that the UI generates on first run and stores in
+`localStorage` (key `student-attendance-ui:client-id`). It is sent
+automatically as a header on every API request, so:
+
+- you can like / unlike from this browser exactly once;
+- the UI knows whether *you* liked something (`likedByMe`);
+- comments you posted from this browser show a delete action; comments
+  from other browsers don't.
+
+To "switch identity" for testing, clear the key from your browser
+storage (or open a different browser).
 
 ## Getting started
 
@@ -83,10 +105,13 @@ VITE_API_BASE_URL=https://your-api.example.com/api/v1
 ```
 src/
 ├── api/               # Axios client and per-resource API modules
-│   ├── client.ts
+│   ├── client.ts      # base axios + getClientId() + apiUrl() + extractApiError()
 │   ├── students.ts
 │   ├── courses.ts
-│   └── attendance.ts
+│   ├── attendance.ts
+│   ├── materials.ts   # course cover + material file uploads / downloads
+│   ├── comments.ts    # course comments (CRUD)
+│   └── likes.ts       # like / unlike for courses and comments
 ├── components/        # Reusable UI primitives
 │   ├── Layout.tsx
 │   ├── Modal.tsx
@@ -97,6 +122,7 @@ src/
 │   ├── Dashboard.tsx
 │   ├── Students.tsx
 │   ├── Courses.tsx
+│   ├── CourseDetail.tsx
 │   └── Attendance.tsx
 ├── styles/app.css     # Application styles / design system
 ├── types.ts           # Shared TypeScript types matching backend DTOs
@@ -119,11 +145,32 @@ All URLs are relative to `/api/v1`.
 - `DELETE /students/{studentId}/courses/{courseId}` — unenroll
 
 ### Courses
-- `GET /courses` (with paging)
+- `GET /courses` (with paging) — returns counts + `coverImageUrl` + `likedByMe`
 - `POST /courses`
 - `GET /courses/{id}`
 - `PUT /courses/{id}`
-- `DELETE /courses/{id}`
+- `DELETE /courses/{id}` — also removes related comments, likes, materials
+
+### Course covers &amp; materials
+- `GET /courses/{id}/cover` — image bytes (used directly as `<img src>`)
+- `POST /courses/{id}/cover` (multipart, field `file`) — set / replace
+- `DELETE /courses/{id}/cover` — remove
+- `GET /courses/{id}/materials` — list
+- `POST /courses/{id}/materials` (multipart, field `files`) — upload one or more
+- `GET /courses/{id}/materials/{matId}/download` — stream original bytes
+- `DELETE /courses/{id}/materials/{matId}`
+
+### Comments
+- `GET /courses/{id}/comments?page=&size=`
+- `POST /courses/{id}/comments`
+- `PUT /comments/{commentId}` — author-only (validated by `X-Client-Id`)
+- `DELETE /comments/{commentId}` — author-only
+
+### Likes
+- `GET /courses/{id}/likes`
+- `POST /courses/{id}/likes` / `DELETE /courses/{id}/likes`
+- `GET /comments/{commentId}/likes`
+- `POST /comments/{commentId}/likes` / `DELETE /comments/{commentId}/likes`
 
 ### Attendance
 - `POST /attendance`

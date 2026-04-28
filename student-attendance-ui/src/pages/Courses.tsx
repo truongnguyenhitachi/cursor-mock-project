@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { coursesApi } from '../api/courses'
-import { extractApiError } from '../api/client'
+import { apiUrl, extractApiError } from '../api/client'
 import { Modal } from '../components/Modal'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Pagination } from '../components/Pagination'
 import { useToast } from '../components/Toast'
 import type { Course, CourseRequest } from '../types'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 12
 
 const emptyForm: CourseRequest = {
   courseCode: '',
@@ -95,7 +97,7 @@ export function CoursesPage() {
     setEditing(null)
   }
 
-  async function submitForm(e: React.FormEvent) {
+  async function submitForm(e: FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setFieldErrors({})
@@ -145,7 +147,10 @@ export function CoursesPage() {
         <div className="section-header">
           <div>
             <h2>Courses</h2>
-            <p>Define the courses students can enroll in.</p>
+            <p>
+              Define the courses students can enroll in. Click a card to view
+              materials, comments, and likes.
+            </p>
           </div>
           <button type="button" className="btn btn--primary" onClick={openCreate}>
             + New course
@@ -162,59 +167,15 @@ export function CoursesPage() {
             <p>Create your first course to start enrolling students.</p>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Name</th>
-                  <th>Credits</th>
-                  <th>Description</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      <strong>{c.courseCode}</strong>
-                    </td>
-                    <td>{c.name}</td>
-                    <td>{c.credits}</td>
-                    <td
-                      style={{
-                        maxWidth: 360,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        color: 'var(--color-text-muted)',
-                      }}
-                      title={c.description ?? ''}
-                    >
-                      {c.description?.trim() || '—'}
-                    </td>
-                    <td>
-                      <div className="table__actions">
-                        <button
-                          type="button"
-                          className="btn btn--secondary btn--sm"
-                          onClick={() => openEdit(c)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn--danger btn--sm"
-                          onClick={() => setDeleteTarget(c)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="course-grid">
+            {items.map((c) => (
+              <CourseCard
+                key={c.id}
+                course={c}
+                onEdit={() => openEdit(c)}
+                onDelete={() => setDeleteTarget(c)}
+              />
+            ))}
           </div>
         )}
 
@@ -324,7 +285,7 @@ export function CoursesPage() {
         title="Delete course?"
         message={
           deleteTarget
-            ? `Remove "${deleteTarget.name}"? Students enrolled in this course will be unenrolled.`
+            ? `Remove "${deleteTarget.name}"? All comments, likes, materials, and student enrollments for this course will also be deleted.`
             : ''
         }
         confirmLabel="Delete"
@@ -334,5 +295,150 @@ export function CoursesPage() {
         onConfirm={confirmDelete}
       />
     </>
+  )
+}
+
+function CourseCard({
+  course,
+  onEdit,
+  onDelete,
+}: {
+  course: Course
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="course-card">
+      <Link
+        to={`/courses/${course.id}`}
+        className="course-card__cover"
+        aria-label={`Open ${course.name}`}
+        style={{ display: 'block' }}
+      >
+        {course.coverImageUrl ? (
+          <img src={apiUrl(course.coverImageUrl)} alt={`${course.name} cover`} />
+        ) : (
+          <div className="course-card__cover-placeholder">
+            {course.courseCode}
+          </div>
+        )}
+      </Link>
+      <div className="course-card__body">
+        <div className="course-card__code">{course.courseCode}</div>
+        <h3 className="course-card__name">
+          <Link to={`/courses/${course.id}`} style={{ color: 'inherit' }}>
+            {course.name}
+          </Link>
+        </h3>
+        <div className="course-card__desc">
+          {course.description?.trim() || (
+            <span style={{ color: 'var(--color-text-soft)' }}>
+              No description
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="course-card__footer">
+        <div className="course-card__stats">
+          <span className="course-card__stat" title="Credits">
+            <CreditIcon /> {course.credits}
+          </span>
+          <span
+            className="course-card__stat"
+            title={course.likedByMe ? 'You liked this' : 'Likes'}
+            style={course.likedByMe ? { color: 'var(--color-danger)' } : undefined}
+          >
+            <HeartIcon filled={course.likedByMe} /> {course.likeCount}
+          </span>
+          <span className="course-card__stat" title="Comments">
+            <CommentIcon /> {course.commentCount}
+          </span>
+          <span className="course-card__stat" title="Materials">
+            <FileIcon /> {course.materialCount}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: '0.3rem' }}>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={onEdit}
+            title="Edit"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={onDelete}
+            title="Delete"
+            style={{ color: 'var(--color-danger)' }}
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CreditIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </svg>
+  )
+}
+
+function HeartIcon({ filled }: { filled?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  )
+}
+
+function CommentIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
+function FileIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </svg>
   )
 }
