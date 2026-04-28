@@ -7,12 +7,12 @@ import type { ApiError } from '../types'
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 
 const CLIENT_ID_KEY = 'student-attendance-ui:client-id'
+const TOKEN_KEY = 'student-attendance-ui:auth-token'
 
 /**
  * Returns a stable per-browser identifier used by the API to track who
- * liked / commented (we have no auth). Generated lazily on first call
- * and persisted in localStorage so the same browser keeps the same id
- * across sessions.
+ * liked / commented (we have no user account for those flows). Generated
+ * lazily on first call and persisted in localStorage.
  */
 export function getClientId(): string {
   let id = localStorage.getItem(CLIENT_ID_KEY)
@@ -26,6 +26,29 @@ export function getClientId(): string {
   return id
 }
 
+export const tokenStore = {
+  get(): string | null {
+    return localStorage.getItem(TOKEN_KEY)
+  },
+  set(token: string): void {
+    localStorage.setItem(TOKEN_KEY, token)
+  },
+  clear(): void {
+    localStorage.removeItem(TOKEN_KEY)
+  },
+}
+
+type UnauthorizedHandler = () => void
+let onUnauthorized: UnauthorizedHandler | null = null
+
+/**
+ * Allows the AuthContext to react to a 401 from any API call by clearing
+ * the local session immediately.
+ */
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
+  onUnauthorized = handler
+}
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -36,8 +59,26 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   config.headers = config.headers ?? {}
   config.headers['X-Client-Id'] = getClientId()
+  const token = tokenStore.get()
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
   return config
 })
+
+api.interceptors.response.use(
+  (r) => r,
+  (error: unknown) => {
+    if (
+      error instanceof AxiosError &&
+      error.response?.status === 401 &&
+      onUnauthorized
+    ) {
+      onUnauthorized()
+    }
+    return Promise.reject(error)
+  },
+)
 
 /**
  * Build a fully qualified URL for an API endpoint that returns a

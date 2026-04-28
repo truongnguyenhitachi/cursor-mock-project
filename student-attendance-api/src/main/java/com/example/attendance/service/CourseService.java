@@ -12,6 +12,8 @@ import com.example.attendance.repository.CourseLikeRepository;
 import com.example.attendance.repository.CourseMaterialRepository;
 import com.example.attendance.repository.CourseRepository;
 import com.example.attendance.repository.CourseVideoRepository;
+import com.example.attendance.repository.NoteRepository;
+import com.example.attendance.repository.UserCourseEnrollmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +31,8 @@ public class CourseService {
     private final CommentRepository commentRepository;
     private final CourseLikeRepository courseLikeRepository;
     private final CommentLikeRepository commentLikeRepository;
+    private final UserCourseEnrollmentRepository enrollmentRepository;
+    private final NoteRepository noteRepository;
     private final StorageService storageService;
 
     public CourseResponse create(CourseRequest request) {
@@ -86,6 +90,10 @@ public class CourseService {
         if (course.getCoverImagePath() != null) {
             storageService.delete(course.getCoverImagePath());
         }
+
+        // Personal enrollments and per-course notes
+        enrollmentRepository.deleteByCourseId(id);
+        noteRepository.deleteByCourseId(id);
 
         courseRepository.deleteById(id);
     }

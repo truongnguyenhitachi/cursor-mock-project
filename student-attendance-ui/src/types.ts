@@ -109,6 +109,50 @@ export interface CourseVideoMetadata {
   description?: string
 }
 
+export type UserRole = 'USER' | 'ADMIN'
+
+export interface AuthUser {
+  id: number
+  username: string
+  displayName: string
+  role: UserRole
+  createdAt: string
+}
+
+export interface AuthResponse {
+  token: string
+  tokenType: string
+  expiresInSeconds: number
+  user: AuthUser
+}
+
+export interface LoginRequest {
+  username: string
+  password: string
+}
+
+export interface RegisterRequest {
+  username: string
+  password: string
+  displayName: string
+}
+
+export interface Note {
+  id: number
+  userId: number
+  courseId: number | null
+  title: string
+  content: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NoteRequest {
+  title: string
+  content: string
+  courseId?: number | null
+}
+
 export interface Attendance {
   id: number
   studentId: number

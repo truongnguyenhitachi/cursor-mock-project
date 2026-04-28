@@ -11,15 +11,21 @@ import { materialsApi } from '../api/materials'
 import { commentsApi } from '../api/comments'
 import { likesApi } from '../api/likes'
 import { videosApi } from '../api/videos'
+import { myCoursesApi } from '../api/myCourses'
+import { notesApi } from '../api/notes'
 import { apiUrl, extractApiError } from '../api/client'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Modal } from '../components/Modal'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
+import { NoteCard, NoteForm } from '../components/notes/NoteUi'
 import type {
   Comment,
   Course,
   CourseMaterial,
   CourseVideo,
+  Note,
+  NoteRequest,
 } from '../types'
 
 const AUTHOR_KEY = 'student-attendance-ui:author-name'
@@ -106,6 +112,16 @@ export function CourseDetailPage() {
   const materialFileRef = useRef<HTMLInputElement>(null)
   const videoFileRef = useRef<HTMLInputElement>(null)
 
+  const { status: authStatus, user } = useAuth()
+  const isAuthed = authStatus === 'authenticated'
+
+  const [enrolled, setEnrolled] = useState(false)
+  const [enrollLoading, setEnrollLoading] = useState(false)
+  const [notes, setNotes] = useState<Note[]>([])
+  const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [deleteNoteId, setDeleteNoteId] = useState<number | null>(null)
+  const [deletingNote, setDeletingNote] = useState(false)
+
   const reloadCourse = useCallback(async () => {
     const data = await coursesApi.get(courseId)
     setCourse(data)
@@ -161,6 +177,83 @@ export function CourseDetailPage() {
       cancelled = true
     }
   }, [courseId, courseIdValid])
+
+  useEffect(() => {
+    // The enroll button + notes section are gated on `isAuthed` in the
+    // JSX, so leaving stale values around when signed-out is harmless —
+    // we only refresh when we actually have a logged-in user.
+    if (!courseIdValid || !isAuthed) return
+    let cancelled = false
+    async function loadAuthedExtras() {
+      try {
+        const [status, list] = await Promise.all([
+          myCoursesApi.enrollmentStatus(courseId),
+          notesApi.list(courseId),
+        ])
+        if (cancelled) return
+        setEnrolled(status.enrolled)
+        setNotes(list)
+      } catch {
+        // best-effort
+      }
+    }
+    loadAuthedExtras()
+    return () => {
+      cancelled = true
+    }
+  }, [courseId, courseIdValid, isAuthed])
+
+  async function toggleEnrollment() {
+    setEnrollLoading(true)
+    try {
+      if (enrolled) {
+        await myCoursesApi.unenroll(courseId)
+        setEnrolled(false)
+        toast.success('Removed from your courses')
+      } else {
+        await myCoursesApi.enroll(courseId)
+        setEnrolled(true)
+        toast.success('Enrolled — added to your courses')
+      }
+    } catch (e) {
+      toast.error(extractApiError(e).message)
+    } finally {
+      setEnrollLoading(false)
+    }
+  }
+
+  async function saveNote(payload: NoteRequest) {
+    try {
+      if (editingNote) {
+        const updated = await notesApi.update(editingNote.id, payload)
+        setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)))
+        toast.success('Note updated')
+      } else {
+        const created = await notesApi.create(payload)
+        setNotes((prev) => [created, ...prev])
+        toast.success('Note added')
+      }
+      setEditingNote(null)
+    } catch (e) {
+      toast.error(extractApiError(e).message)
+      throw e
+    }
+  }
+
+  async function confirmDeleteNote() {
+    if (deleteNoteId == null) return
+    setDeletingNote(true)
+    try {
+      await notesApi.delete(deleteNoteId)
+      setNotes((prev) => prev.filter((n) => n.id !== deleteNoteId))
+      toast.success('Note deleted')
+      setDeleteNoteId(null)
+    } catch (e) {
+      toast.error(extractApiError(e).message)
+    } finally {
+      setDeletingNote(false)
+    }
+  }
 
   async function toggleCourseLike() {
     if (!course) return
@@ -443,11 +536,36 @@ export function CourseDetailPage() {
                   · {course.credits} credit{course.credits === 1 ? '' : 's'}
                 </div>
               </div>
-              <LikeButton
-                liked={course.likedByMe}
-                count={course.likeCount}
-                onToggle={toggleCourseLike}
-              />
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {isAuthed ? (
+                  <button
+                    type="button"
+                    className={
+                      enrolled
+                        ? 'btn btn--secondary btn--sm'
+                        : 'btn btn--primary btn--sm'
+                    }
+                    onClick={toggleEnrollment}
+                    disabled={enrollLoading}
+                    title={
+                      enrolled
+                        ? 'You are enrolled in this course'
+                        : 'Add this course to your personal list'
+                    }
+                  >
+                    {enrollLoading
+                      ? 'Working…'
+                      : enrolled
+                        ? '✓ Enrolled'
+                        : 'Register course'}
+                  </button>
+                ) : null}
+                <LikeButton
+                  liked={course.likedByMe}
+                  count={course.likeCount}
+                  onToggle={toggleCourseLike}
+                />
+              </div>
             </div>
 
             <div className="cover">
@@ -794,6 +912,64 @@ export function CourseDetailPage() {
               </div>
             )}
           </div>
+
+          <div className="card">
+            <div className="section-header">
+              <div>
+                <h2>Notes</h2>
+                <p>
+                  {isAuthed
+                    ? `Personal notes for ${user?.displayName}. Only you can see these.`
+                    : 'Sign in to take personal notes on this course.'}
+                </p>
+              </div>
+            </div>
+
+            {!isAuthed ? (
+              <div className="empty-state">
+                <h3>Notes are private</h3>
+                <p>
+                  <Link to="/auth">Sign in</Link> or{' '}
+                  <Link to="/auth?mode=register">create an account</Link> to
+                  start jotting down notes.
+                </p>
+              </div>
+            ) : (
+              <>
+                <NoteForm
+                  key={editingNote?.id ?? 'new'}
+                  initial={editingNote}
+                  courses={[]}
+                  fixedCourseId={courseId}
+                  onSubmit={saveNote}
+                  onCancel={
+                    editingNote ? () => setEditingNote(null) : undefined
+                  }
+                />
+
+                <div className="section-divider" />
+
+                {notes.length === 0 ? (
+                  <div className="empty-state">
+                    <h3>No notes yet</h3>
+                    <p>Capture your first thought above.</p>
+                  </div>
+                ) : (
+                  <div className="note-list">
+                    {notes.map((n) => (
+                      <NoteCard
+                        key={n.id}
+                        note={n}
+                        course={course}
+                        onEdit={() => setEditingNote(n)}
+                        onDelete={() => setDeleteNoteId(n.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -907,6 +1083,17 @@ export function CourseDetailPage() {
           deletingComment ? undefined : setDeleteCommentId(null)
         }
         onConfirm={confirmDeleteComment}
+      />
+
+      <ConfirmDialog
+        open={deleteNoteId !== null}
+        title="Delete note?"
+        message="This will permanently remove the note."
+        confirmLabel="Delete"
+        destructive
+        busy={deletingNote}
+        onCancel={() => (deletingNote ? undefined : setDeleteNoteId(null))}
+        onConfirm={confirmDeleteNote}
       />
 
     </>

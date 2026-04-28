@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { UserMenu } from './UserMenu'
+import { useAuth } from '../contexts/AuthContext'
 
 interface NavItem {
   to: string
@@ -94,14 +96,61 @@ const navItems: NavItem[] = [
   },
 ]
 
+const authNavItems: NavItem[] = [
+  {
+    to: '/my-courses',
+    label: 'My Courses',
+    description: 'Courses you have enrolled in',
+    icon: (
+      <svg
+        className="sidebar__icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      </svg>
+    ),
+  },
+  {
+    to: '/notes',
+    label: 'Notes',
+    description: 'Personal study notes',
+    icon: (
+      <svg
+        className="sidebar__icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="9" y1="13" x2="15" y2="13" />
+        <line x1="9" y1="17" x2="13" y2="17" />
+      </svg>
+    ),
+  },
+]
+
 export function Layout() {
   const location = useLocation()
+  const { status } = useAuth()
+  const isAuthed = status === 'authenticated'
+
+  const allItems = [...navItems, ...(isAuthed ? authNavItems : [])]
   const current =
-    navItems.find(
+    allItems.find(
       (n) =>
         n.to === location.pathname ||
         (n.to !== '/' && location.pathname.startsWith(n.to)),
-    ) ?? navItems[0]
+    ) ?? allItems[0]
 
   return (
     <div className="app-shell">
@@ -127,6 +176,24 @@ export function Layout() {
               <span>{item.label}</span>
             </NavLink>
           ))}
+
+          {isAuthed && (
+            <>
+              <div className="sidebar__group-label">Personal</div>
+              {authNavItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    isActive ? 'sidebar__link sidebar__link--active' : 'sidebar__link'
+                  }
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </>
+          )}
         </nav>
         <div className="sidebar__footer">
           v1.0 · Connected to <code>/api/v1</code>
@@ -138,6 +205,7 @@ export function Layout() {
             <h1>{current.label}</h1>
             <span>{current.description}</span>
           </div>
+          <UserMenu />
         </header>
         <div className="main__content">
           <Outlet />
